@@ -100,3 +100,35 @@ func TestQuerySqlMultipleData(t *testing.T) {
 		fmt.Println("===========================")
 	}
 }
+
+func TestSqlInjection(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// testing using username password = admin
+	username := "admin'; #" // sql injection, next code after input username become comments (#)
+	password := "password"
+
+	query := "SELECT username FROM user WHERE username = '" + username + "' AND password = '" + password + "' LIMIT 1"
+	fmt.Println(query)
+
+	rows, err := db.QueryContext(ctx, query) // READ DATA
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	// iterate rows until next is false
+	if rows.Next() {
+		var username string
+		err := rows.Scan(&username)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Success login:", username)
+	} else {
+		fmt.Println("Failed login, username", username, "wrong password / not found.")
+	}
+}
