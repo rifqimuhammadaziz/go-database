@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -184,4 +185,62 @@ func TestExecSqlParameter(t *testing.T) {
 	}
 
 	fmt.Println("Success Insert New User!")
+}
+
+func TestAutoIncrementId(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+
+	email := "xenostheord@gmail.com"
+	comment := "Comment testing 5"
+
+	// use ? to avoid sql injection
+	query := "INSERT INTO comments(email, comment) VALUES(?, ?)"
+	result, err := db.ExecContext(ctx, query, email, comment) // INSERT DATA
+	if err != nil {
+		panic(err)
+	}
+
+	// get last id in table
+	insertId, err := result.LastInsertId()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Success insert new comment with id:", insertId)
+}
+
+func TestPrepareStatement(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+
+	ctx := context.Background()
+	query := "INSERT INTO comments(email, comment) VALUES(?, ?)"
+	statement, err := db.PrepareContext(ctx, query)
+	if err != nil {
+		panic(err)
+	}
+	defer statement.Close()
+
+	// multiple insert data using one statement query
+	for i := 0; i < 10; i++ {
+		email := "rifqi" + strconv.Itoa(i) + "@gmail.com"
+		comment := "Comment -" + strconv.Itoa(i)
+
+		// insert data using statement, query bind on statement
+		result, err := statement.ExecContext(ctx, email, comment)
+		if err != nil {
+			panic(err)
+		}
+
+		// get last id in table
+		id, err := result.LastInsertId()
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println("Comment Id:", id)
+	}
 }
